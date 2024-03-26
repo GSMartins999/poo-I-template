@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { TAccountDB, TAccountDBPost, TUserDB, TUserDBPost } from './types'
 import { db } from './database/knex'
+import { User } from './models/User'
 
 const app = express()
 
@@ -42,6 +43,22 @@ app.get("/users", async (req: Request, res: Response) => {
         } else {
             const result: TUserDB[] = await db("users")
             usersDB = result
+        }
+        
+    //Criando paradigmas:
+
+        const users: User[] = []
+
+        for(let userDB of usersDB){
+            const user = new User(
+                userDB.id,
+                userDB.name,
+                userDB.email,
+                userDB.password,
+                userDB.created_at
+            )
+
+            users.push(user)
         }
 
         res.status(200).send(usersDB)
@@ -91,15 +108,24 @@ app.post("/users", async (req: Request, res: Response) => {
             throw new Error("'id' já existe")
         }
 
-        const newUser: TUserDBPost = {
+        const newUser = new User(
             id,
             name,
             email,
-            password
+            password,
+            new Date().toISOString()
+        )
+        const newUserDB: TUserDB = {
+            id: newUser.getId(),
+            name: newUser.getName(),
+            email: newUser.getEmail(),
+            password: newUser.getPassword(),
+            created_at: newUser.getCreatedAt()
         }
 
         await db("users").insert(newUser)
         const [ userDB ]: TUserDB[] = await db("users").where({ id })
+
 
         res.status(201).send(userDB)
     } catch (error) {
